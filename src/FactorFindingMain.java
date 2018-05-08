@@ -9,18 +9,17 @@ public class FactorFindingMain {
 	
 	public static void main(String[] args) {
 		
-		mainFactorCheck();
+		//mainFactorCheck();
 		mainPrimeCheck();
 	}
 
 	public static void mainFactorCheck() {
 		System.out.println("Threads before: " + Thread.getAllStackTraces().keySet());
 		long startTime = System.currentTimeMillis();
-//		long testNum = 999999999999999989L; // prime example
-		long testNum = 999999999999999988L;
-		Collection<Long> factors = findFactors(testNum);  
-//TODO: Change to multi-threaded once you implement that...
-//		Collection<Long> factors = findFactorsMulti(testNum, 2);  
+		long testNum = 999999999999999989L; // prime example
+//		long testNum = 999999999999999988L;
+//		Collection<Long> factors = findFactors(testNum);  
+		Collection<Long> factors = findFactorsMulti(testNum, 2);  
 		long endTime = System.currentTimeMillis();
 		// For debugging, print threads before & after, to make sure you didn't leave any extra FactorFindingThreads threads running!
 		System.out.println("Threads after: " + Thread.getAllStackTraces().keySet());
@@ -31,11 +30,10 @@ public class FactorFindingMain {
 	public static void mainPrimeCheck() { 
 		System.out.println("Threads before: " + Thread.getAllStackTraces().keySet());
 		long startTime = System.currentTimeMillis();
-//		long testNum = 999999999999999989L; // prime example
-		long testNum = 999999999999999988L; // composite example
-		boolean result = isPrime(testNum);   
-//TODO: Change to multi-threaded once you implement that...
-//		boolean result = isPrimeMulti(testNum, 8);  
+		long testNum = 999999999999999989L; // prime example
+//		long testNum = 999999999999999988L; // composite example
+//		boolean result = isPrime(testNum);   
+		boolean result = isPrimeMulti(testNum, 8);  
 		long endTime = System.currentTimeMillis();
 		// For debugging, print threads before & after, to make sure you didn't leave any extra FactorFindingThreads threads running!
 		System.out.println("Threads after: " + Thread.getAllStackTraces().keySet());
@@ -89,18 +87,39 @@ public class FactorFindingMain {
 	 */
 	public static Collection<Long> findFactorsMulti(long num, int threadCount) {
 
-		// TODO: Create an array to hold the right number of FactorFindingThreads
-		// TODO: Create a ConcurrentLinkedQueue for the threads to put found factors in.
-		// TODO: Create each thread, with the appropriate starting/ending range,
+		//Create an array to hold the right number of FactorFindingThreads
+		long sqrtNum = (long) Math.sqrt(num);
+		long threadNumRange = sqrtNum/threadCount;
+		FactorFindingThread[] threadPool = new FactorFindingThread[threadCount];
+		
+		//Create a ConcurrentLinkedQueue for the threads to put found factors in.
+		ConcurrentLinkedQueue<Long> factorsFound = new ConcurrentLinkedQueue<Long>();
+		
+		//Create each thread, with the appropriate starting/ending range,
 		//       in order for all the threads to cooperatively check from 1 up 
-		//       to the sqrt of the number, and start each thread running.
-		// TODO: this method should then wait for all the created threads to complete,
-		//       before returning the factors that were found.
+		//       to the sqrt of the number, and start each thread running.	
+		//this method should then wait for all the created threads to complete,
+		//       before returning the factors that were found.	
+		
+		
+		for (int i = 0; i < threadCount; i++){
+			threadPool[i] = new FactorFindingThread(num, (i*threadNumRange)+1, Math.min(sqrtNum,(i+1)*threadNumRange), factorsFound);
+			threadPool[i].start();
+			try {
+				threadPool[i].join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		
+		
+		
 
 // DEBUG TIP: You can run this after starting the threads to see which threads are running. 
 //		System.out.println("Threads during: " + Thread.getAllStackTraces().keySet());
 
-		return null;	
+		return factorsFound;	
 	}
 
 
@@ -114,9 +133,9 @@ public class FactorFindingMain {
 	 */
 	public static boolean isPrimeMulti(long num, int threadCount) {
 		
-		// TODO: first, check & return false if the number is <= 1.
 		
-		// TODO: This method should be similar to the findFactorsMulti method, EXCEPT
+		
+		//This method should be similar to the findFactorsMulti method, EXCEPT
 		//       that it should check numbers between 2 and the sqrt of the number,
 		//       and instead of waiting for all the threads to finish, this
 		//       method's thread should keep running, and keep polling the
@@ -127,7 +146,60 @@ public class FactorFindingMain {
 		//       before returning false.
 		//       To know if the number IS prime, this thread must check to see if ALL
 		//       of the FactorFindingThreads have finished running, before returning true.
-		return true;	
+		
+		
+		//first, check & return false if the number is <= 1.
+		if (num<=1){
+			return false;
+		}
+
+		FactorFindingThread[] threadPool = new FactorFindingThread[threadCount];
+		ConcurrentLinkedQueue<Long> factorsFound = new ConcurrentLinkedQueue<Long>();
+		long sqrtNum = (long) Math.sqrt(num);
+		long threadNumRange = sqrtNum/threadCount;
+		
+		for (int i = 0; i < threadCount; i++){
+			if (i == 0) threadPool[i] = new FactorFindingThread(num, 2, Math.min(sqrtNum,(i+1)*threadNumRange), factorsFound);
+			else threadPool[i] = new FactorFindingThread(num, (i*threadNumRange)+1, Math.min(sqrtNum,(i+1)*threadNumRange), factorsFound);
+			threadPool[i].start();			
+		}
+		
+				
+		while (true){
+			//check if found a factor, interrupt all threads early
+			if (!factorsFound.isEmpty()){
+				for (FactorFindingThread thread: threadPool){
+					thread.interrupt();
+					
+				}
+				
+				for (FactorFindingThread thread: threadPool){
+					try {
+						thread.join();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					
+				}
+			} 
+			//check all threads have complete
+			else {
+				boolean complete = true;
+				for (FactorFindingThread thread: threadPool){
+					complete = complete && !thread.isAlive();
+					
+				}
+				if (complete) break;
+			}
+			
+		}
+		
+		
+		
+		
+		
+		return factorsFound.isEmpty();
+		
 	}
 
 

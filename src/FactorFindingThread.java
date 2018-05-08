@@ -24,9 +24,22 @@ public class FactorFindingThread extends Thread {
 	
 	@Override
 	public void run() {
-		// TODO: check possible divisors for num, between start (inclusive) and stop (exclusive)
-		// TODO: any factors found (along with their pairing factor) should be added to the factorsFound queue.
-		// TODO: Also, while running keep checking whether this thread has been interrupted, and if so stop early.      
+		//check possible divisors for num, between start (inclusive) and stop (exclusive)
+		//any factors found (along with their pairing factor) should be added to the factorsFound queue.
+		//Also, while running keep checking whether this thread has been interrupted, and if so stop early.   
+		
+		
+		for (long div = start; div < stop; div++) {
+			if (num % div == 0) {
+				factorsFound.add(div);
+				if (div * div != num) { // don't add the square root twice for perfect squares... 
+					factorsFound.add(num / div);
+				}
+			} 
+			if (Thread.currentThread().isInterrupted()){
+				return;
+			}
+		}
 	}
 	
 
