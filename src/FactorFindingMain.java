@@ -9,15 +9,16 @@ public class FactorFindingMain {
 	
 	public static void main(String[] args) {
 		
-		//mainFactorCheck();
-		mainPrimeCheck();
+		mainFactorCheck();
+		//mainPrimeCheck();
 	}
 
 	public static void mainFactorCheck() {
 		System.out.println("Threads before: " + Thread.getAllStackTraces().keySet());
 		long startTime = System.currentTimeMillis();
-		long testNum = 999999999999999989L; // prime example
+//		long testNum = 999999999999999989L; // prime example
 //		long testNum = 999999999999999988L;
+		long testNum = 25L;
 //		Collection<Long> factors = findFactors(testNum);  
 		Collection<Long> factors = findFactorsMulti(testNum, 2);  
 		long endTime = System.currentTimeMillis();
@@ -90,6 +91,10 @@ public class FactorFindingMain {
 		//Create an array to hold the right number of FactorFindingThreads
 		long sqrtNum = (long) Math.sqrt(num);
 		long threadNumRange = sqrtNum/threadCount;
+		if (threadNumRange==0){
+			threadCount=(int) sqrtNum;
+			threadNumRange=1;
+		}
 		FactorFindingThread[] threadPool = new FactorFindingThread[threadCount];
 		
 		//Create a ConcurrentLinkedQueue for the threads to put found factors in.
@@ -103,7 +108,12 @@ public class FactorFindingMain {
 		
 		
 		for (int i = 0; i < threadCount; i++){
-			threadPool[i] = new FactorFindingThread(num, (i*threadNumRange)+1, Math.min(sqrtNum,(i+1)*threadNumRange), factorsFound);
+			long iL = (long) i;
+			long lower = (iL*threadNumRange)+1L;
+			long upper = Math.min(sqrtNum,(iL+1L)*threadNumRange)+1L;
+			threadPool[i] = new FactorFindingThread(num, lower, upper, factorsFound);
+			//System.out.println(threadNumRange);
+			System.out.println("Range: "+ lower +" "+ upper);
 			threadPool[i].start();
 			try {
 				threadPool[i].join();
